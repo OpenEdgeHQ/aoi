@@ -1,0 +1,3 @@
+[submodule "AIOpsLab"]
+	path = AIOpsLab
+	url = https://github.com/microsoft/AIOpsLab.git

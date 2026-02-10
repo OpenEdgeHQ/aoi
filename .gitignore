@@ -1,0 +1,62 @@
+# IDE 配置文件
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# 日志文件
+logs/
+*.log
+*.log.*
+
+# 资源文件（如果不需要版本控制）
+# Jupyter Notebook 检查点
+.ipynb_checkpoints/
+
+test/
+
+# 其他常见的忽略项
+# 操作系统生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+*~
+tmp/
+
+# 编译输出
+*.pyc
+*.pyo
+__pycache__/
+*.class
+*.o
+*.so
+
+# 包文件
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+agent-manifest.json
+
+# Result / output directories
+res/
+out/
+log/
+data/
