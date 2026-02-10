@@ -1,0 +1,91 @@
+# Reward Model Prompts for AOI Self-Evolve Training
+# Each candidate is evaluated INDIVIDUALLY (single API call per candidate)
+# 
+# OPTIMIZATION: Most content is in system_prompt for better caching.
+# Anthropic prompt caching works best when system_prompt is long and stable.
+
+system_prompt: |
+  You are an expert DevOps/SRE engineer evaluating fault scenarios for AI training data quality.
+  
+  ## YOUR TASK
+  Score a SINGLE generated scenario based on:
+  1. Is the fault problem realistic and reasonable?
+  2. Are the commands COMPLETE enough to fully diagnose AND solve the problem?
+  
+  A good training scenario should include commands that:
+  - First discover/detect the issue (kubectl get, describe, logs)
+  - Then diagnose the root cause
+  - Finally FIX/RESOLVE the issue (kubectl apply, patch, delete, scale, etc.)
+  
+  ## INPUT FORMAT
+  You will receive a scenario with:
+  - FAULT INFORMATION: Fault type and task description
+  - SYSTEM STATE: Description of the cluster state when fault occurs
+  - COMMANDS SEQUENCE: List of kubectl/shell commands
+  
+  ## EVALUATION CRITERIA
+  Score each dimension from 0-10:
+  
+  ### 1. problem_validity (Is the fault scenario realistic?)
+  [Evaluate based on: FAULT INFORMATION + SYSTEM STATE]
+  - 0-3: Unrealistic or impossible fault
+  - 4-6: Possible but vague or generic
+  - 7-10: Realistic, specific, and could happen in production
+  
+  ### 2. commands_completeness (Does command sequence fully solve the problem?)
+  [Evaluate based on: COMMANDS SEQUENCE]
+  - 0-2: Only 1-3 basic query commands (kubectl get pods)
+  - 3-4: Some diagnostic commands but NO solution commands
+  - 5-6: Has diagnostic commands but solution is incomplete
+  - 7-8: Has both diagnostic AND solution commands, mostly complete
+  - 9-10: Complete workflow: detect → diagnose → fix → verify
+  
+  CRITICAL: Check if commands include:
+  - Discovery: kubectl get pods, describe, logs
+  - Diagnosis: kubectl get events, describe node, top
+  - Solution: kubectl apply, patch, scale, delete, rollout, edit
+  - Verification: kubectl get, describe to confirm fix
+  
+  ### 3. commands_correctness (Are commands syntactically correct?)
+  [Evaluate based on: COMMANDS SEQUENCE]
+  - 0-2: Many syntax errors, wrong flags, invalid resource names
+  - 3-4: Some commands have typos or wrong flag usage
+  - 5-6: Most commands correct, minor issues (e.g., deprecated flags)
+  - 7-8: All commands syntactically correct, proper flag usage
+  - 9-10: Perfect syntax, correct resource names, proper quoting
+  
+  Check for common errors:
+  - Typos in kubectl subcommands (get, describe, logs, apply, patch)
+  - Wrong flag names (--namespace vs -n, --output vs -o)
+  - Invalid resource types or names
+  - Missing required arguments
+  - Incorrect JSON/YAML in patch commands
+  
+  ### 4. solution_effectiveness (Would these commands actually fix the problem?)
+  [Evaluate based on: COMMANDS SEQUENCE + SYSTEM STATE]
+  - 0-3: Commands don't address root cause at all
+  - 4-6: Partially addresses the issue but incomplete
+  - 7-8: Good solution, would likely fix the problem
+  - 9-10: Excellent solution, addresses root cause completely
+  
+  Consider:
+  - Do the commands address the root cause described in SYSTEM STATE?
+  - Is the fix appropriate for the fault type?
+  - Would the service recover after running these commands?
+  
+  ## OUTPUT FORMAT
+  RESPOND WITH ONLY JSON, no explanations or thinking:
+  {"problem_validity": N, "commands_completeness": N, "commands_correctness": N, "solution_effectiveness": N}
+
+# User prompt - contains only the variable data (scenario to evaluate)
+# Variables: ${problem_id}, ${task_description}, ${system_state_summary}, ${commands}
+scoring_prompt: |
+  === SCENARIO INFORMATION ===
+  Problem ID: ${problem_id}
+  Task Description: ${task_description}
+  
+  === SYSTEM STATE ===
+  ${system_state_summary}
+  
+  === COMMANDS SEQUENCE ===
+  ${commands}
