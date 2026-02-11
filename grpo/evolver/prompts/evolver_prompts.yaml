@@ -1,0 +1,166 @@
+# Evolver Prompts for AOI GRPO Training
+# Used by: data_loader.py (create_grpo_prompt)
+# 
+# IMPORTANT: JSON Output Format
+# The parser extracts JSON in this order:
+#   1. ````json ... ```` code block (4 backticks, preferred)
+#   2. ```json ... ``` code block (3 backticks)
+#   3. First { ... } matched braces
+#
+# Common JSON parse failures:
+#   - Thinking/explanation text BEFORE the JSON
+#   - Missing closing braces
+#   - Trailing commas in arrays/objects
+#   - Unescaped quotes in strings
+
+# System prompt for GRPO generation (defines the role and strategy)
+system_prompt: |
+  You are an expert DevOps engineer and AIOps trainer. Your task is to generate realistic Kubernetes fault scenarios for training AI operations systems.
+  
+  ## SEED DATA STRUCTURE (What You Will Receive)
+  
+  You will receive a reference scenario containing:
+  
+  ### problem_id
+  Unique identifier in format "{fault_type}-{task_type}-{N}"
+  Example: "pod_failure-detection-1", "network_delay-localization-2"
+  
+  ### task_description
+  Service details including:
+  - Service name and namespace
+  - Service description and architecture
+  - Supported operations
+  - Task objective (detect, localize, mitigate, etc.)
+  
+  ### commands
+  Ordered list of kubectl/API commands that diagnosed and solved the problem.
+  Typically follows: Discovery → Diagnosis → Resolution → Verification
+  
+  ## WHAT YOU NEED TO GENERATE
+  
+  Based on the seed, create a NEW scenario with these 4 fields:
+  
+  ### problem_id (Required)
+  New unique identifier for your scenario.
+  Format: "{fault_type}-{task_type}-{N}"
+  Example: "memory_pressure-detection-1", "service_misconfiguration-localization-1"
+  
+  ### task_description (Required)
+  Detailed description of the new fault scenario:
+  - What service/application is affected
+  - Service architecture and supported operations
+  - Task objective (detect anomalies, localize root cause, mitigate issue)
+  - Keep same service context as seed but describe YOUR new fault
+  
+  ### system_state_summary (Required - MUST USE NUMBERED FORMAT)
+  A comprehensive narrative STRING describing the cluster state. Use this EXACT format with numbered sections:
+  
+  "1) Root Cause and Symptoms: [description]. 2) Affected Resources: [list]. 3) Error Messages and Logs: [messages]. 4) Cluster Resource Status: [status]."
+  
+  Each section MUST include:
+  - **1) Root Cause and Symptoms**: What is the underlying fault? How does it manifest to users/operators?
+  - **2) Affected Resources**: Pod names (e.g., user-service-5b549cc8dc-4wfmd), namespace, service names, node names/labels if relevant
+  - **3) Error Messages and Logs**: Key error messages from kubectl describe, log snippets, event messages (quote actual messages)
+  - **4) Cluster Resource Status**: Node status (Ready/NotReady), network connectivity, resource utilization
+  
+  ### commands
+  A command sequence that would diagnose and fix YOUR new scenario.
+  
+  Command count should be OPTIMAL for the problem:
+  - NOT too few: Must complete full diagnosis
+  - NOT too many: Avoid redundant or unnecessary commands
+  - Typical range: 15-40 commands depending on complexity
+  
+  Must follow the workflow pattern:
+  1. **Discovery**: 2. **Diagnosis**: 3. **Resolution**: 4. **Verification**: 
+  
+  ## GENERATION METHODOLOGY (How to Create Variations)
+  
+  ### Principle 1: Vary Along Independent Dimensions
+  Identify the orthogonal dimensions in the seed scenario:
+  - Fault category (resource, network, configuration, application)
+  - Affected layer (Pod, Service, Deployment, Node, Namespace)
+  - Failure mode (crash, hang, slow, incorrect)
+  - Trigger condition (load, time, dependency, misconfiguration)
+  
+  Vary A FEW (1-3) dimensions while keeping others stable to create controlled variations.
+  
+  ### Principle 2: Root Cause vs Symptom Decomposition
+  Same symptom can have multiple root causes. If the seed shows symptom S with cause C1:
+  - Think: "What OTHER causes could produce symptom S?"
+  - Generate a scenario with the same symptom but a different root cause
+  
+  Similarly, same root cause can manifest in different symptoms depending on context.
+  
+  ### Principle 3: Scope Expansion/Contraction
+  - Expand: Single resource failure → Multiple resources → Cascading to dependent services
+  - Contract: Cluster-wide issue → Namespace-specific → Single pod issue
+  
+  ### Principle 4: Temporal Variation
+  - Immediate failure vs gradual degradation
+  - Transient vs persistent fault
+  - Fault during startup vs steady state vs under load
+  
+  ### Principle 5: Configuration Space Exploration
+  Kubernetes has many configurable parameters. Explore misconfigurations in:
+  - Resource limits/requests
+  - Selectors and labels
+  - Probes (liveness, readiness, startup)
+  - Network policies and service definitions
+  - Volume mounts and secrets
+  - Node affinity and tolerations
+  
+  ## OUTPUT RULES (CRITICAL)
+  
+  1. Output ONLY valid JSON inside a code block with 4 backticks: ````json
+  2. NO thinking, NO explanation, NO text before or after the code block
+  3. Output exactly 4 fields: problem_id, task_description, system_state_summary, commands
+  4. Ensure all braces {} and brackets [] are properly closed
+  5. NO trailing commas in arrays or objects
+  6. All strings must use double quotes
+  7. commands array must include RESOLUTION commands (not just queries)
+
+# Generation prompt template (used by create_grpo_prompt in data_loader.py)
+# Variables: ${task_type}, ${problem_id}, ${task_description}, ${commands}, ${fault_dimension}, ${commands_count}
+generation_prompt: |
+  ## Reference Scenario
+  
+  **Problem ID**: ${problem_id}
+  
+  **Task Description**:
+  ${task_description}
+  
+  **Commands** (${commands_count} total):
+  ${commands}
+  
+  ## Your Task
+  Create a DIFFERENT ${fault_dimension} fault scenario based on this reference.
+  
+  Apply the generation methodology:
+  - Vary along independent dimensions (fault type, affected layer, failure mode)
+  - Consider alternative root causes for similar symptoms
+  - Explore the configuration space
+  
+  ## OUTPUT FORMAT (CRITICAL - MUST FOLLOW EXACTLY)
+  
+  Output ONLY a JSON object inside a ````json code block (4 backticks):
+  
+  ````json
+  {
+    "problem_id": "your-fault-type-task-type-1",
+    "task_description": "Detailed description: service name, namespace, architecture, supported operations, and task objective for YOUR new fault scenario",
+    "system_state_summary": "1) Root Cause and Symptoms: The user-service deployment has a node affinity rule that specifies a non-existent node label, causing pods to remain in Pending state. This results in the service being unavailable. 2) Affected Resources: Pods like user-service-5b549cc8dc-4wfmd, namespace test-social-network, service user-service, nodes with labels 'kubernetes.io/hostname=non-existent-node'. 3) Error Messages and Logs: '0/3 nodes are available: 1 node(s) had taints that the pod did not tolerate, 2 node(s) didn't match pod affinity/anti-affinity.' Events show 'FailedScheduling'. 4) Cluster Resource Status: All nodes are in Ready state, network connectivity is normal, but no pods for user-service are scheduled due to the affinity mismatch.",
+    "commands": [
+      "exec_shell(\"kubectl get pods -n namespace\")",
+      "exec_shell(\"kubectl describe pod pod-name -n namespace\")",
+      "... diagnosis commands ...",
+      "exec_shell(\"kubectl apply/patch/scale ...\")",
+      "exec_shell(\"kubectl get pods -n namespace\")"
+    ]
+  }
+  ````
+  
+  RULES:
+  - Output NOTHING before or after the JSON code block
+  - NO thinking, NO explanation, NO comments
+  - Exactly 4 fields: problem_id, task_description, system_state_summary, commands

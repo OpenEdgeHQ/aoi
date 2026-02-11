@@ -157,9 +157,27 @@ pip install vllm>=0.6.0
 pip install tensorboard
 ```
 
+### Datasets & Models
+
+We provide pre-built training datasets and LoRA checkpoints on Hugging Face:
+
+**Datasets:**
+
+| Dataset | Description | Link |
+|---------|-------------|------|
+| aoi-planner-seeds-sonnet | Evolver seed scenarios (ground truth from Claude Sonnet) | [HuggingFace](https://huggingface.co/datasets/spacezenmasterr/aoi-planner-seeds-sonnet) |
+| aoi-observer-training-data | Observer GRPO training data | [HuggingFace](https://huggingface.co/datasets/spacezenmasterr/aoi-observer-training-data) |
+
+**Trained Models (LoRA Checkpoints):**
+
+| Model | Description | Link |
+|-------|-------------|------|
+| aoi-evolver-lora-ckpt490 | Evolver LoRA adapter (checkpoint 490) | [HuggingFace](https://huggingface.co/spacezenmasterr/aoi-evolver-lora-ckpt490) |
+| aoi-observer-lora-ckpt200 | Observer LoRA adapter (checkpoint 200) | [HuggingFace](https://huggingface.co/spacezenmasterr/aoi-observer-lora-ckpt200) |
+
 ### Prepare Seed Data
 
-Seed data consists of JSON files from successful task evaluations (ground truth). Each seed contains `task_info`, `commands`, and `evaluation_results`.
+Seed data consists of JSON files from successful task evaluations (ground truth). Each seed contains `task_info`, `commands`, and `evaluation_results`. You can download the pre-built seed data from the datasets above, or generate your own by running evaluations.
 
 ```bash
 # Seed data directory structure
