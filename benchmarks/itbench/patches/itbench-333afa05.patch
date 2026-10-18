@@ -1,0 +1,172 @@
+diff --git a/scenarios/sre/project/manage_applications.yaml b/scenarios/sre/project/manage_applications.yaml
+index c2493cea..4620bb00 100644
+--- a/scenarios/sre/project/manage_applications.yaml
++++ b/scenarios/sre/project/manage_applications.yaml
+@@ -21,0 +22,20 @@
++    - name: Configure applications from scenario
++      tags: [always]
++      when: scenario_id is defined
++      block:
++        - name: Load scenario application configuration
++          ansible.builtin.import_role:
++            name: scenarios
++          vars:
++            scenarios_identifier: "{{ scenario_id }}"
++        - name: Enable scenario applications
++          ansible.builtin.set_fact:
++            applications_book_info_enabled: "{{ scenarios_scenario.get('applications', {}).get('bookInfo', {}).get('enabled', false) }}"
++            applications_opentelemetry_demo_enabled: "{{ scenarios_scenario.get('applications', {}).get('opentelemetryDemo', {}).get('enabled', false) }}"
++
++    - name: Configure applications from inventory
++      tags: [always]
++      when: scenario_id is undefined
++      ansible.builtin.set_fact:
++        applications_book_info_enabled: "{{ applications.book_info | default(false) }}"
++        applications_opentelemetry_demo_enabled: "{{ applications.otel_demo | default(false) }}"
+diff --git a/scenarios/sre/project/roles/applications/tasks/install_opentelemetry_demo.yaml b/scenarios/sre/project/roles/applications/tasks/install_opentelemetry_demo.yaml
+index 69695202..fdc3c65e 100644
+--- a/scenarios/sre/project/roles/applications/tasks/install_opentelemetry_demo.yaml
++++ b/scenarios/sre/project/roles/applications/tasks/install_opentelemetry_demo.yaml
+@@ -144 +144 @@
+-            spanmetrics:
++            span_metrics:
+@@ -172 +172 @@
+-                  - spanmetrics
++                  - span_metrics
+diff --git a/scenarios/sre/project/roles/faults/tasks/inject_ingress_port_blocking_network_policy.yaml b/scenarios/sre/project/roles/faults/tasks/inject_ingress_port_blocking_network_policy.yaml
+index 8133ebc9..7ffaa548 100644
+--- a/scenarios/sre/project/roles/faults/tasks/inject_ingress_port_blocking_network_policy.yaml
++++ b/scenarios/sre/project/roles/faults/tasks/inject_ingress_port_blocking_network_policy.yaml
+@@ -20,2 +20 @@
+-        ingress:
+-          - ports: []
++        ingress: []
+diff --git a/scenarios/sre/project/roles/faults/tasks/inject_priority_kubernetes_workload_priority_preemption.yaml b/scenarios/sre/project/roles/faults/tasks/inject_priority_kubernetes_workload_priority_preemption.yaml
+index 910493a4..f5b8b120 100644
+--- a/scenarios/sre/project/roles/faults/tasks/inject_priority_kubernetes_workload_priority_preemption.yaml
++++ b/scenarios/sre/project/roles/faults/tasks/inject_priority_kubernetes_workload_priority_preemption.yaml
+@@ -60,0 +61,5 @@
++            containers:
++              - name: "{{ faults_kubernetes_object.spec.template.spec.containers[0].name }}"
++                resources:
++                  requests:
++                    cpu: "1"
+@@ -115 +120 @@
+-    wait: true
++    wait: false
+@@ -117,0 +123,16 @@
++
++# Saturation intentionally leaves some high-priority pods pending. Verify the
++# intended preemption instead of waiting for an impossible full rollout.
++- name: Wait for target workload to lose availability after preemption
++  kubernetes.core.k8s_info:
++    api_version: "{{ faults_kubernetes_object.apiVersion }}"
++    kubeconfig: "{{ faults_cluster.kubeconfig }}"
++    kind: "{{ faults_kubernetes_object.kind }}"
++    name: "{{ faults_kubernetes_object.metadata.name }}"
++    namespace: "{{ faults_kubernetes_object.metadata.namespace }}"
++  register: faults_preempted_workload
++  until:
++    - faults_preempted_workload.resources | ansible.builtin.length == 1
++    - (faults_preempted_workload.resources[0].status.availableReplicas | default(0)) < (faults_preempted_workload.resources[0].spec.replicas | default(1))
++  delay: 5
++  retries: 24
+diff --git a/scenarios/sre/project/roles/faults/tasks/validate_fault_arguments.yaml b/scenarios/sre/project/roles/faults/tasks/validate_fault_arguments.yaml
+index b474bb31..81cb4062 100644
+--- a/scenarios/sre/project/roles/faults/tasks/validate_fault_arguments.yaml
++++ b/scenarios/sre/project/roles/faults/tasks/validate_fault_arguments.yaml
+@@ -23,2 +23 @@
+-        - not faults_args_kubernetes_object.api_found
+-        - faults_args_kubernetes_object.resources | ansible.builtin.length != 1
++        - not faults_args_kubernetes_object.api_found or faults_args_kubernetes_object.resources | ansible.builtin.length != 1
+diff --git a/scenarios/sre/project/roles/tools/tasks/install_clickhouse_instances.yaml b/scenarios/sre/project/roles/tools/tasks/install_clickhouse_instances.yaml
+index 66394e5c..6f5c6d03 100644
+--- a/scenarios/sre/project/roles/tools/tasks/install_clickhouse_instances.yaml
++++ b/scenarios/sre/project/roles/tools/tasks/install_clickhouse_instances.yaml
+@@ -53,0 +54 @@
++          CREATE DATABASE IF NOT EXISTS jaeger;
+diff --git a/scenarios/sre/project/roles/tools/tasks/install_opentelemetry_collectors.yaml b/scenarios/sre/project/roles/tools/tasks/install_opentelemetry_collectors.yaml
+index 06c70a8a..655d526e 100644
+--- a/scenarios/sre/project/roles/tools/tasks/install_opentelemetry_collectors.yaml
++++ b/scenarios/sre/project/roles/tools/tasks/install_opentelemetry_collectors.yaml
+@@ -45 +45 @@
+-        image: quay.io/it-bench/opentelemetry-collector:2.0.0@sha256:e476e400e6106ee02387b0fa99ef3d8a7c28a7cd7ab75abf60b6ae05bea5964a
++        image: quay.io/it-bench/opentelemetry-collector:2.0.0@sha256:a828e91ded0e89b9ca943af70fec24de4cb9a25749a9576f676205b75cf914b8
+@@ -118,3 +118,6 @@
+-                    username: "{{ tools_clickhouse_username }}"
+-                    password: "{{ tools_clickhouse_password }}" # pragma: allowlist secret
+-                    endpoint: "{{ tools_clickhouse_endpoint.http }}"
++                    addresses:
++                      - "{{ tools_clickhouse_endpoint.tcp }}:9000"
++                    auth:
++                      basic:
++                        username: "{{ tools_clickhouse_username }}"
++                        password: "{{ tools_clickhouse_password }}" # pragma: allowlist secret
+@@ -303 +306 @@
+-        image: quay.io/it-bench/opentelemetry-collector:2.0.0@sha256:e476e400e6106ee02387b0fa99ef3d8a7c28a7cd7ab75abf60b6ae05bea5964a
++        image: quay.io/it-bench/opentelemetry-collector:2.0.0@sha256:a828e91ded0e89b9ca943af70fec24de4cb9a25749a9576f676205b75cf914b8
+diff --git a/scenarios/sre/scripts/inject_scenario_faults.py b/scenarios/sre/scripts/inject_scenario_faults.py
+index a11a6ba0..e9864b16 100644
+--- a/scenarios/sre/scripts/inject_scenario_faults.py
++++ b/scenarios/sre/scripts/inject_scenario_faults.py
+@@ -74,0 +75,3 @@ def wait_for_runners(runners: List[Any]) -> None:
++    if any(runner.status != "successful" for runner in runners):
++        raise RuntimeError("One or more ITBench fault injections failed")
++
+diff --git a/scenarios/sre/scripts/unittests/test_inject_scenario_faults.py b/scenarios/sre/scripts/unittests/test_inject_scenario_faults.py
+index 069d71ee..6ebfd43f 100644
+--- a/scenarios/sre/scripts/unittests/test_inject_scenario_faults.py
++++ b/scenarios/sre/scripts/unittests/test_inject_scenario_faults.py
+@@ -35,0 +36 @@ class TestLoadScenarioSpec(unittest.TestCase):
++        spec_data = spec_data["spec"]
+@@ -169 +170,2 @@ class TestWaitForRunners(unittest.TestCase):
+-        inject_scenario_faults.wait_for_runners(mock_runners)
++        with self.assertRaises(RuntimeError):
++            inject_scenario_faults.wait_for_runners(mock_runners)
+@@ -171 +173 @@ class TestWaitForRunners(unittest.TestCase):
+-        # Verify function completes for all terminal statuses
++        # Failed, canceled, or timed-out injections must propagate failure.
+@@ -198,0 +201 @@ class TestMain(unittest.TestCase):
++        spec_data = spec_data["spec"]
+@@ -233,0 +237 @@ class TestMain(unittest.TestCase):
++        spec_data = spec_data["spec"]
+@@ -290,0 +295 @@ class TestIntegration(unittest.TestCase):
++        spec_data = spec_data["spec"]
+diff --git a/scenarios/sre/project/roles/agent/tasks/revoke.yaml b/scenarios/sre/project/roles/agent/tasks/revoke.yaml
+index 6b9cb7b2..2020c281 100644
+--- a/scenarios/sre/project/roles/agent/tasks/revoke.yaml
++++ b/scenarios/sre/project/roles/agent/tasks/revoke.yaml
+@@ -1,4 +1,33 @@
+ ---
++# Bindings refer to ServiceAccounts by name, so delete them before the account
++# can be recreated for another scenario. Search all namespaces, not just the
++# current scenario's requested namespaces.
++- name: Find all ITBench agent namespace access objects
++  kubernetes.core.k8s_info:
++    api_version: rbac.authorization.k8s.io/v1
++    kind: "{{ item }}"
++    kubeconfig: "{{ agent_cluster.kubeconfig }}"
++    label_selectors:
++      - "app.kubernetes.io/component = agent-access-provider"
++      - "app.kubernetes.io/managed-by = ITBench"
++  loop:
++    - RoleBinding
++    - Role
++  register: agent_namespace_access_objects
++
++- name: Delete all ITBench agent namespace access objects
++  kubernetes.core.k8s:
++    api_version: "{{ item.apiVersion }}"
++    kind: "{{ item.kind }}"
++    name: "{{ item.metadata.name }}"
++    namespace: "{{ item.metadata.namespace }}"
++    kubeconfig: "{{ agent_cluster.kubeconfig }}"
++    state: absent
++    wait: true
++  loop: "{{ agent_namespace_access_objects.results | map(attribute='resources') | flatten }}"
++  loop_control:
++    label: "{{ item.kind }}/{{ item.metadata.namespace }}/{{ item.metadata.name }}"
++
+ - name: Delete all agent access related ClusterRoleBindings
+   kubernetes.core.k8s:
+     api_version: rbac.authorization.k8s.io/v1

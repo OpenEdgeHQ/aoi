@@ -1,0 +1,208 @@
+{
+  "offline_regression_tests": {
+    "run": 76,
+    "passed": 76
+  },
+  "access_isolation": {
+    "utc": "2026-10-12T01:24:35.441848+00:00",
+    "checks": [
+      {
+        "check": "otel_authorized_before_revoke",
+        "passed": true
+      },
+      {
+        "check": "owned_objects_deleted_and_unrelated_preserved_after_two_revokes",
+        "passed": true
+      },
+      {
+        "check": "book_info_authorized",
+        "passed": true
+      },
+      {
+        "check": "old_otel_namespace_not_inherited",
+        "passed": true
+      },
+      {
+        "check": "scenario_16_permission_preflight",
+        "expected_passed": false,
+        "actual_passed": false,
+        "passed": true
+      },
+      {
+        "check": "scenario_48_permission_preflight",
+        "expected_passed": false,
+        "actual_passed": false,
+        "passed": true
+      },
+      {
+        "check": "scenario_53_permission_preflight",
+        "expected_passed": true,
+        "actual_passed": true,
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  "command_format_checks": {
+    "checks": [
+      {
+        "check": "list_action_returns_logged_error",
+        "passed": true
+      },
+      {
+        "check": "invalid_multiline_rejected_with_guidance",
+        "passed": true
+      },
+      {
+        "check": "retry_with_escaped_multiline_applies",
+        "passed": true
+      },
+      {
+        "check": "probe_reads_applied_data",
+        "passed": true
+      },
+      {
+        "check": "probe_write_remains_blocked",
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  "scenario48_cli": {
+    "exit_code": 1,
+    "model_record_created": false,
+    "preflight_passed": false,
+    "blocked_message_present": true
+  },
+  "scenario53": {
+    "scenario": 53,
+    "aoi_revision": "3592db058d084380a88ab1184ac18eb83122e937",
+    "itbench_revision": "333afa05c421b4e02a47b6c1b51686d20ce40cdd",
+    "itbench_patch_sha256": "42ac7693b53fc86379d08f75427aa1448f28f7fc5b39b5df5a3d34a91b11e8b5",
+    "model": "gpt-4o-mini",
+    "max_iterations": 14,
+    "duration_seconds": 392.163,
+    "submitted": true,
+    "official_success": null,
+    "local_rollout_complete": true,
+    "direct_v3_request_passed": true,
+    "local_passed": true,
+    "tokens": 542665,
+    "tool_calls": 46,
+    "tool_errors": 16,
+    "provider_calls": 76,
+    "cost_usd": null,
+    "error": null
+  },
+  "limitations": [
+    "One live model scenario; no full-suite or success-rate claim.",
+    "Official SRE grader not executed; official success remains null.",
+    "Unknown fault IDs report partial permission coverage.",
+    "Command rejection/retry tested deterministically against the live cluster independently of the model run.",
+    "StorageClass listing remains forbidden for the restricted agent; preflight does not certify every diagnostic path."
+  ],
+  "post_upstream_merge_validation": {
+    "base_revision": "43d5a59bb9e3b1ff7183376daf460a108d143ffa",
+    "offline_regression_tests": {
+      "run": 87,
+      "passed": 87
+    },
+    "local_smoke": {
+      "utc": "2026-10-12T03:32:07.684493+00:00",
+      "checks": [
+        {
+          "check": "scenario48_blocked_before_model",
+          "passed": true
+        },
+        {
+          "check": "malformed_list_is_logged_error",
+          "passed": true
+        },
+        {
+          "check": "stdin_retry_applied",
+          "passed": true
+        },
+        {
+          "check": "live_readback",
+          "passed": true
+        },
+        {
+          "check": "recovery_retains_list_error_and_inflight_object",
+          "passed": true
+        }
+      ],
+      "passed": true,
+      "model_executed": false
+    },
+    "note": "Existing scenario53 model results above predate the upstream merge; this follow-up checks adapter/journal integration without rerunning inference."
+  },
+  "post_merge_real_api_smoke": {
+    "scenario": 53,
+    "aoi_revision": "a2bb64b762999a2808c6c04ab637930f9c9721e9",
+    "itbench_revision": "333afa05c421b4e02a47b6c1b51686d20ce40cdd",
+    "itbench_patch_sha256": "42ac7693b53fc86379d08f75427aa1448f28f7fc5b39b5df5a3d34a91b11e8b5",
+    "started_at": "2026-10-12T04:05:42.247027+00:00",
+    "ended_at": "2026-10-12T04:12:06.647211+00:00",
+    "model": "gpt-4o-mini",
+    "temperature": 0.0,
+    "max_iterations": 14,
+    "duration_seconds": 384.532,
+    "submitted": true,
+    "official_success": null,
+    "local_rollout_complete": true,
+    "direct_v3_request_passed": true,
+    "local_passed": true,
+    "tokens": {
+      "input_tokens": 695292,
+      "output_tokens": 33271,
+      "total_tokens": 728563
+    },
+    "token_usage_source": "provider_reported",
+    "provider_calls": 67,
+    "tool_calls": 37,
+    "tool_errors": 8,
+    "successful_stdin_manifest_calls": 0,
+    "cost_usd": null,
+    "runner_error": null,
+    "journal_validation": {
+      "aoi_revision": "a2bb64b762999a2808c6c04ab637930f9c9721e9",
+      "event_counts": {
+        "trial_started": 1,
+        "provider_usage": 67,
+        "tool_action_started": 37,
+        "tool_call": 37,
+        "trial_ended": 1
+      },
+      "provider_calls": 67,
+      "tool_calls": 37,
+      "tool_errors": 8,
+      "malformed_non_string_actions": 0,
+      "tokens": {
+        "input_tokens": 695292,
+        "output_tokens": 33271,
+        "total_tokens": 728563
+      },
+      "checks": {
+        "trial_start_and_end_recorded": true,
+        "provider_usage_matches_record": true,
+        "tool_calls_match_record": true,
+        "replayed_recovery_preserves_tools_and_usage": true,
+        "no_unfinished_dispatches_after_completion": true,
+        "official_success_remains_ungraded": true
+      },
+      "passed": true,
+      "recovery_test": "Replay completed real-API journal; process was not interrupted."
+    },
+    "limitations": [
+      "Single fresh model run, no full-suite or success-rate comparison.",
+      "Standalone runner plus independent functional checks; no official grader or batch live-alert verdict.",
+      "Recovery replay uses the completed real-API journal; the live process was not cancelled."
+    ],
+    "repair_strategy": "Deleted invalid PVC, removed injected database volume/mount, temporarily scaled reviews-v3 to 2 replicas.",
+    "baseline_cleanup": {
+      "deployment_specs_match_baseline": true,
+      "fault_pvc_absent": true,
+      "reviews_v3_replicas_restored": 1
+    }
+  }
+}

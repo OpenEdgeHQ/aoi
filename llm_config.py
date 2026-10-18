@@ -109,6 +109,20 @@ def create_llm_config(
 llm_config = create_llm_config()
 
 
+def backend_identity() -> Dict[str, str]:
+    """Return only non-secret backend settings used by the OpenAI-compatible runner.
+
+    Module settings already include .env loading and the same defaults used by
+    create_llm_config. AWorld 0.2.6 uses OPENAI_ENDPOINT when llm_base_url is empty.
+    """
+    effective = llm_config.llm_config
+    return {
+        "api_source": API_SOURCE,
+        "llm_provider": effective.llm_provider,
+        "api_base": effective.llm_base_url or os.getenv("OPENAI_ENDPOINT", "https://api.openai.com/v1"),
+    }
+
+
 # Helper function to display config info
 def print_config_info():
     """Print current LLM configuration info."""

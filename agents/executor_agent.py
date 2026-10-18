@@ -15,6 +15,7 @@ from memory.memory_item import (
 )
 from prompts.loader import get_prompt_loader
 from utils.text_utils import deduplicate_text
+from utils.json_response import parse_model_json
 
 
 class ExecutorAgent(BaseAgent):
@@ -202,6 +203,7 @@ Focus on making targeted fixes based on the diagnosis from the Observer.
         root_cause_component = "Unknown"
         root_cause_issue = "Unknown"
         namespace = "Unknown"
+        fix_method = "Unknown"
         
         if isinstance(executor_context, dict):
             root_cause = executor_context.get('root_cause', {})
@@ -487,7 +489,7 @@ Focus on making targeted fixes based on the diagnosis from the Observer.
             # 尝试JSON解析
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
             if json_match:
-                json_data = json.loads(json_match.group())
+                json_data = parse_model_json(json_match.group())
 
                 # 提取所有字段
                 for key in ["analysis", "use_probe", "probe_instruction",
@@ -666,7 +668,8 @@ Focus on making targeted fixes based on the diagnosis from the Observer.
                            execute_action: Callable,
                            current_subtask: Optional[SubTaskItem] = None,
                            session_id: Optional[str] = None,
-                           executor_context: str = "") -> Dict[str, Any]:
+                           executor_context: str = "",
+                           probe_execute_action: Optional[Callable] = None) -> Dict[str, Any]:
         """
         运行完整执行流程（带重试机制）
 
@@ -761,10 +764,14 @@ Focus on making targeted fixes based on the diagnosis from the Observer.
                     
                     probe_res = await single_probe.probe_run(
                         task_instruction=probe_instruction,
-                        execute_action=execute_action,
+                        execute_action=probe_execute_action or execute_action,
                         current_subtask=current_subtask,
                         session_id=session_id
                     )
+                    probe_usage = single_probe.get_token_usage()
+                    self.total_input_tokens += probe_usage["input_tokens"]
+                    self.total_output_tokens += probe_usage["output_tokens"]
+                    self.total_tokens += probe_usage["total_tokens"]
                     
                     # 构建简洁的探测结果
                     probe_results_detail = probe_res.get("results", [])

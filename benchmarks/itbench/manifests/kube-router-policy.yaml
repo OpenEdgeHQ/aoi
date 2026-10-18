@@ -1,0 +1,93 @@
+# Policy-only deployment based on the official kube-router v2.11.1 firewall example.
+# https://github.com/cloudnativelabs/kube-router/blob/v2.11.1/daemonset/kube-router-firewall-daemonset.yaml
+# Keep Kind's existing CNI and kube-proxy; do not install or overwrite CNI files.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: itbench-network-policy
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: itbench-network-policy
+rules:
+  - apiGroups: [""]
+    resources: [nodes, namespaces, pods, services, endpoints]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [networkpolicies]
+    verbs: [get, list, watch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: itbench-network-policy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: itbench-network-policy
+subjects:
+  - kind: ServiceAccount
+    name: itbench-network-policy
+    namespace: kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: itbench-network-policy
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: itbench-network-policy
+  template:
+    metadata:
+      labels:
+        app: itbench-network-policy
+    spec:
+      serviceAccountName: itbench-network-policy
+      priorityClassName: system-node-critical
+      hostNetwork: true
+      hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: kube-router
+          image: docker.io/cloudnativelabs/kube-router:v2.11.1
+          args:
+            - --run-router=false
+            - --run-firewall=true
+            - --run-service-proxy=false
+            - --run-loadbalancer=false
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: modules
+              mountPath: /lib/modules
+              readOnly: true
+            - name: xtables-lock
+              mountPath: /run/xtables.lock
+      volumes:
+        - name: modules
+          hostPath:
+            path: /lib/modules
+        - name: xtables-lock
+          hostPath:
+            path: /run/xtables.lock
+            type: FileOrCreate

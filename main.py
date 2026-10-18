@@ -246,6 +246,11 @@ class AIOPlatform:
                             "result": str(submit_result)
                         })
 
+                        if (isinstance(submit_result, dict) and submit_result.get("error")) or str(submit_result).startswith("Error:"):
+                            self.observer.previous_iteration_context = str(submit_result)
+                            self.execution_results["iterations"].append(iteration_data)
+                            return iteration_data
+
                         # 标记任务完成
                         if current_subtask:
                             current_subtask.complete_execution(True, f"Submitted: {submission_command}")
@@ -364,6 +369,11 @@ class AIOPlatform:
                         "result": str(submit_result)
                     })
 
+                    if (isinstance(submit_result, dict) and submit_result.get("error")) or str(submit_result).startswith("Error:"):
+                        self.observer.previous_iteration_context = str(submit_result)
+                        self.execution_results["iterations"].append(iteration_data)
+                        return iteration_data
+
                     # 标记任务完成
                     if current_subtask:
                         current_subtask.complete_execution(True, f"Submitted: {submission_command}")
@@ -399,7 +409,7 @@ class AIOPlatform:
 
                 result = await self.probe.probe_run(
                     task_instruction=task_instruction,
-                    execute_action=self.execute_action,
+                    execute_action=getattr(self.env_client, "execute_probe_action", self.execute_action),
                     current_subtask=current_subtask,
                     session_id=self.session_id
                 )
@@ -453,7 +463,8 @@ class AIOPlatform:
                     execute_action=self.execute_action,
                     current_subtask=current_subtask,
                     session_id=self.session_id,
-                    executor_context=executor_context
+                    executor_context=executor_context,
+                    probe_execute_action=getattr(self.env_client, "execute_probe_action", None)
                 )
 
                 # 记录执行结果
@@ -587,10 +598,15 @@ class AIOPlatform:
             res_dir = f"./res/{model_name}-round{round_num}"
         else:
             res_dir = f"./res/{model_name}"
+        if getattr(self.env_client, "benchmark_name", None) == "ITBench":
+            res_dir = f"./res/itbench/raw/{model_name}"
         os.makedirs(res_dir, exist_ok=True)
 
         # 生成文件名（使用problem_id）
-        filename = f"{res_dir}/{problem_id}.json"
+        if getattr(self.env_client, "benchmark_name", None) == "ITBench":
+            filename = f"{res_dir}/{self.session_id}.json"
+        else:
+            filename = f"{res_dir}/{problem_id}.json"
 
         # 收集 agent 的 token 使用情况
         token_usage = {

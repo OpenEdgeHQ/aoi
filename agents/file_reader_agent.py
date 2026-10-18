@@ -11,6 +11,7 @@ from aworld.config.conf import AgentConfig
 from aworld.runner import Runners
 from utils.logger_config import AgentLogger
 from prompts.loader import get_prompt_loader
+from utils.llm_usage import usage_from_result
 
 
 class FileReaderAgent:
@@ -28,6 +29,9 @@ class FileReaderAgent:
         self.llm_config = llm_config
         self.agent_logger = AgentLogger("FILE_READER")
         self.prompt_loader = get_prompt_loader()
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+        self.total_tokens = 0
         
         # 初始化LLM agent (用于文件选择)
         self.llm_agent = Agent(
@@ -84,6 +88,7 @@ class FileReaderAgent:
                 input=user_prompt,
                 agent=self.path_extraction_agent
             )
+            self._record_usage(llm_response)
             
             # 提取响应文本
             response_text = llm_response.answer if hasattr(llm_response, 'answer') else str(llm_response)
@@ -205,6 +210,7 @@ class FileReaderAgent:
                 input=user_prompt,
                 agent=self.llm_agent
             )
+            self._record_usage(llm_response)
             
             # 提取响应文本
             response_text = llm_response.answer if hasattr(llm_response, 'answer') else str(llm_response)
@@ -341,6 +347,19 @@ class FileReaderAgent:
         
         return enhanced_result, read_files
     
+    def _record_usage(self, response) -> None:
+        usage = usage_from_result(response)
+        self.total_input_tokens += usage["input_tokens"]
+        self.total_output_tokens += usage["output_tokens"]
+        self.total_tokens += usage["total_tokens"]
+
+    def get_token_usage(self) -> Dict[str, int]:
+        return {
+            "input_tokens": self.total_input_tokens,
+            "output_tokens": self.total_output_tokens,
+            "total_tokens": self.total_tokens,
+        }
+
     def should_read_files(self, command: str) -> bool:
         """
         判断是否应该读取文件

@@ -125,6 +125,10 @@ Key settings in `llm_config.py` (or via environment variables):
 | `MAX_OUTPUT_TOKENS` | Max LLM output tokens | `5000` |
 | `DISABLE_THINKING` | Disable thinking mode (for Qwen3) | `True` |
 
+## ITBench SRE Evaluation
+
+Run AOI against a locally deployed ITBench SRE mitigation scenario using the [ITBench setup and runner guide](docs/itbench.md). ITBench provides the external pass/fail verdict; AOI records task-level actions, tokens, time, and optional estimated cost.
+
 ## GRPO Training (Self-Evolve)
 
 The system supports **Group Relative Policy Optimization (GRPO)** for training the Evolver agent to generate diverse and high-quality fault scenarios. GRPO is a reinforcement learning algorithm that:

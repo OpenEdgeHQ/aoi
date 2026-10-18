@@ -144,7 +144,7 @@ system_prompt: |
       "focus_area": "Current investigation focus"
   }
   **MANDATORY Initial Checks for Tasks:**
-   1. kubectl get pods -n <namespace> --show-all
+   1. kubectl get pods -n <namespace>
    2. Check for any pods NOT in Running state
    3. For each non-Running pod:
       - kubectl describe pod <name>

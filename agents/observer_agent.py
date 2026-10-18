@@ -19,6 +19,7 @@ from memory.memory_item import (
 
 
 from prompts.loader import get_prompt_loader
+from utils.llm_usage import usage_from_result
 
 
 class ObserverAgent(BaseAgent):
@@ -87,6 +88,12 @@ class ObserverAgent(BaseAgent):
         # 初始化时创建初始子任务队列
         self._initialize_task_queue()
 
+    def _record_direct_usage(self, response) -> None:
+        usage = usage_from_result(response)
+        self.total_input_tokens += usage["input_tokens"]
+        self.total_output_tokens += usage["output_tokens"]
+        self.total_tokens += usage["total_tokens"]
+
     def _extract_task_type_from_problem_id(self, problem_id: Optional[str]) -> str:
         """
         从problem_id中提取任务类型
@@ -149,6 +156,7 @@ class ObserverAgent(BaseAgent):
                 input=initial_prompt,
                 agent=self.llm_agent
             ))
+            self._record_direct_usage(llm_response)
 
             # 解析响应
             response_text = llm_response.answer if hasattr(llm_response, 'answer') else str(llm_response)
@@ -300,6 +308,7 @@ class ObserverAgent(BaseAgent):
                 input=update_prompt,
                 agent=self.llm_agent
             )
+            self._record_direct_usage(llm_response)
 
             response_text = llm_response.answer if hasattr(llm_response, 'answer') else str(llm_response)
 
